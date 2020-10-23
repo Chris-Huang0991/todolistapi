@@ -1,7 +1,9 @@
 import { PrismaClient } from '@prisma/client'
 import winston, { Logger } from 'winston'
+import authMidgard from '../midgard/authMidgard'
 
 const db = new PrismaClient()
+const midgard = props => { return { authMidgard: authMidgard(props) } }
 
 const colorizer = winston.format.colorize({
   colors: {
@@ -36,11 +38,13 @@ const logger = winston.createLogger({
 export type Context = {
   db: PrismaClient,
   logger: Logger
+  midgard: any
 }
 
-export const createContext = () => {
+export const createContext = props => {
   return {
     db,
     logger,
+    midgard: midgard(props),
   }
 }

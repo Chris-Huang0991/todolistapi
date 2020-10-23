@@ -1,5 +1,5 @@
 import { arg, extendType, inputObjectType, objectType } from '@nexus/schema'
-import { connectionFromPromisedArray, fromGlobalId } from 'graphql-relay'
+import { connectionFromArray, connectionFromPromisedArray, fromGlobalId } from 'graphql-relay'
 
 export const TodoItem = objectType({
   name: 'TodoItem',
@@ -8,7 +8,25 @@ export const TodoItem = objectType({
     t.implements('Node')
     t.model.content()
     t.model.isDone()
+    t.model.isFavorite()
+    t.model.isDisabled()
+    t.model.createdAt()
+    t.model.todoListId()
   },
+})
+
+export const test = extendType({
+  type: 'TodoList',
+  definition: t => {
+    t.connectionField('todoItems', {
+      type: 'TodoItem',
+      resolve: async (todoList, args, ctx) => {
+        const todoItems = await ctx.db.todoList.findOne({ where: { id: todoList.id }}).todoItems()
+        const connection = connectionFromArray(todoItems, args)
+        return connection
+      }
+    })
+  }
 })
 
 export const TodoItemQuery = extendType({
@@ -25,11 +43,12 @@ export const TodoItemQuery = extendType({
     })
   },
 })
-
+//create
 export const TodoItemCreateInput = inputObjectType({
   name: 'TodoItemCreateInput',
   definition: (t) => {
     t.string('content', { required: true })
+    t.string('todoListId', { required: true })
   },
 })
 export const TodoItemCreatePayload = objectType({
@@ -50,10 +69,18 @@ export const TodoItemCreateMutation = extendType({
           required: true,
         }),
       },
-      resolve: async (_root, { input }, { db }) => {
+      resolve: async (_root, { input }, { db, midgard }) => {
+        const userId = midgard.authMidgard
+        if (!userId) throw new Error('Unauthorized')
+        const { id } = fromGlobalId(input.todoListId)
         const newItem = await db.todoItem.create({
           data: {
             content: input.content,
+            todoList: {
+              connect: {
+                id: id
+              }
+            }
           },
         })
 
@@ -64,7 +91,7 @@ export const TodoItemCreateMutation = extendType({
     })
   },
 })
-
+//delete
 export const TodoItemDeleteInput = inputObjectType({
   name: 'TodoItemDeleteInput',
   definition: (t) => {
@@ -90,7 +117,9 @@ export const TodoItemDeleteMutation = extendType({
           required: true,
         }),
       },
-      resolve: async (_root, { input }, { db }) => {
+      resolve: async (_root, { input }, { db, midgard }) => {
+        const userId = midgard.authMidgard
+        if (!userId) throw new Error('Unauthorized')
         const { id } = fromGlobalId(input.id)
         const deletedItem = await db.todoItem.delete({ where: { id } })
 
@@ -102,7 +131,7 @@ export const TodoItemDeleteMutation = extendType({
     })
   },
 })
-
+//item done
 export const TodoItemDoneInput = inputObjectType({
   name: 'TodoItemDoneInput',
   definition: (t) => {
@@ -127,7 +156,9 @@ export const TodoItemDoneMutation = extendType({
           required: true,
         }),
       },
-      resolve: async (_root, { input }, { db }) => {
+      resolve: async (_root, { input }, { db, midgard }) => {
+        const userId = midgard.authMidgard
+        if (!userId) throw new Error('Unauthorized')
         const { id } = fromGlobalId(input.id)
 
         const updatedItem = db.todoItem.update({
@@ -144,7 +175,7 @@ export const TodoItemDoneMutation = extendType({
     })
   },
 })
-
+//item undone
 export const TodoItemUndoneInput = inputObjectType({
   name: 'TodoItemUndoneInput',
   definition: (t) => {
@@ -169,13 +200,107 @@ export const TodoItemUndoneMutation = extendType({
           required: true,
         }),
       },
-      resolve: async (_root, { input }, { db }) => {
+      resolve: async (_root, { input }, { db, midgard }) => {
+        const userId = midgard.authMidgard
+        if (!userId) throw new Error('Unauthorized')
         const { id } = fromGlobalId(input.id)
 
         const updatedItem = db.todoItem.update({
           where: { id },
           data: {
             isDone: false,
+          },
+        })
+
+        return {
+          todoItem: updatedItem,
+        }
+      },
+    })
+  },
+})
+
+//item favorite
+
+export const TodoItemFavoriteInput = inputObjectType({
+  name: 'TodoItemFavoriteInput',
+  definition: (t) => {
+    t.id('id', { required: true })
+  },
+})
+export const TodoItemFavoritePayload = objectType({
+  name: 'TodoItemFavoritePayload',
+  definition: (t) => {
+    t.field('todoItem', { type: 'TodoItem' })
+  },
+})
+export const TodoItemFavoriteMutation = extendType({
+  type: 'Mutation',
+  definition: (t) => {
+    t.field('todoItemFavorite', {
+      type: 'TodoItemFavoritePayload',
+      nullable: false,
+      args: {
+        input: arg({
+          type: 'TodoItemFavoriteInput',
+          required: true,
+        }),
+      },
+      resolve: async (_root, { input }, { db, midgard }) => {
+        const userId = midgard.authMidgard
+        if (!userId) throw new Error('Unauthorized')
+        const { id } = fromGlobalId(input.id)
+
+        const updatedItem = db.todoItem.update({
+          where: { id },
+          data: {
+            isFavorite: true,
+          },
+        })
+
+        return {
+          todoItem: updatedItem,
+        }
+      },
+    })
+  },
+})
+
+//item unfavorite
+
+export const TodoItemUnfavoriteInput = inputObjectType({
+  name: 'TodoItemUnfavoriteInput',
+  definition: (t) => {
+    t.id('id', { required: true })
+  },
+})
+export const TodoItemUnfavoritePayload = objectType({
+  name: 'TodoItemUnfavoritePayload',
+  definition: (t) => {
+    t.field('todoItem', { type: 'TodoItem' })
+  },
+})
+export const TodoItemUnfavoriteMutation = extendType({
+  type: 'Mutation',
+  definition: (t) => {
+    t.field('todoItemUnfavorite', {
+      type: 'TodoItemUnfavoritePayload',
+      nullable: false,
+      args: {
+        input: arg({
+          type: 'TodoItemUnfavoriteInput',
+          required: true,
+        }),
+      },
+      resolve: async (_root, { input }, { db, midgard }) => {
+        const userId = midgard.authMidgard
+        if (!userId) throw new Error('Unauthorized')
+        const { id } = fromGlobalId(input.id)
+
+        const updatedItem = db.todoItem.update({
+          where: { id },
+          data: {
+            isFavorite: false,
           },
         })
 

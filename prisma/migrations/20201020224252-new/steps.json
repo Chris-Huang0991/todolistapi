@@ -1,0 +1,58 @@
+{
+  "version": "0.3.14-fixed",
+  "steps": [
+    {
+      "tag": "CreateField",
+      "model": "TodoItem",
+      "field": "todoList",
+      "type": "TodoList",
+      "arity": "Required"
+    },
+    {
+      "tag": "CreateDirective",
+      "location": {
+        "path": {
+          "tag": "Field",
+          "model": "TodoItem",
+          "field": "todoList"
+        },
+        "directive": "relation"
+      }
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "TodoItem",
+          "field": "todoList"
+        },
+        "directive": "relation"
+      },
+      "argument": "fields",
+      "value": "[todoListId]"
+    },
+    {
+      "tag": "CreateArgument",
+      "location": {
+        "tag": "Directive",
+        "path": {
+          "tag": "Field",
+          "model": "TodoItem",
+          "field": "todoList"
+        },
+        "directive": "relation"
+      },
+      "argument": "references",
+      "value": "[id]"
+    },
+    {
+      "tag": "CreateField",
+      "model": "TodoItem",
+      "field": "todoListId",
+      "type": "String",
+      "arity": "Required"
+    }
+  ]
+}

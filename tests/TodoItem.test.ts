@@ -5,12 +5,49 @@ const mockContent = 'Fuck around today'
 
 describe('TodoItem', () => {
   let createdItemId = null
-
+  let token
+  let listId
   test('Mutation - todoItemCreate', async () => {
+    const signupMutation = await ctx.client.request(
+      ` mutation Signup($input: SignupInput!) {
+          signup(input: $input) {
+            id
+            token
+          }
+        }
+      `,
+      { 
+        input:{ 
+          account: 'test', 
+          password: 'test', 
+          name: 'test' 
+        }
+      }
+    )
+    token = signupMutation.signup.token
+    await ctx.client.setHeader("authorization", `Bearer ${token}`)
+    const createTodoListMutation = await ctx.client.request(
+      ` mutation CreateTodoList($input: CreateTodoListInput!) {
+          createTodoList(input: $input) {
+            todoList {
+              id
+              name
+            }
+          }
+        }
+      `,
+      { 
+        input:{ 
+          name: 'test1' 
+        }
+      }
+    )
+    listId = createTodoListMutation?.createTodoList.todoList.id
+
     const createdTodoItemMutation = await ctx.client.request(
       `
-        mutation CreateTodoItem($content: String!) {
-          todoItemCreate(input: { content: $content }) {
+        mutation CreateTodoItem($content: String!, $id: String!) {
+          todoItemCreate(input: { content: $content todoListId: $id }) {
             todoItem {
               id
               content
@@ -19,7 +56,7 @@ describe('TodoItem', () => {
           }
         }
       `,
-      { content: mockContent }
+      { content: mockContent, id: listId }
     )
     
     const createdItem = createdTodoItemMutation?.todoItemCreate?.todoItem
@@ -105,6 +142,46 @@ describe('TodoItem', () => {
     const undoneItem = undoneMutation.todoItemUndone.todoItem
     expect(undoneItem.id).toBe(createdItemId)
     expect(undoneItem.isDone).toBe(false)
+  })
+  
+  test('Mutation - todoItemFavorite', async () => {
+    const favoriteMutation = await ctx.client.request(
+      `
+        mutation FavoriteMutation($id: ID!) {
+          todoItemFavorite(input: { id: $id }) {
+            todoItem {
+              id
+              content
+              isFavorite
+            }
+          }
+        }
+      `,
+      { id: createdItemId }
+    )
+    const Item = favoriteMutation.todoItemFavorite.todoItem
+    expect(Item.id).toBe(createdItemId)
+    expect(Item.isFavorite).toBe(true)
+  })
+
+  test('Mutation - todoItemUnfavorite', async () => {
+    const unfavoriteMutation = await ctx.client.request(
+      `
+        mutation UnfavoriteMutation($id: ID!) {
+          todoItemUnfavorite(input: { id: $id }) {
+            todoItem {
+              id
+              content
+              isFavorite
+            }
+          }
+        }
+      `,
+      { id: createdItemId }
+    )
+    const Item = unfavoriteMutation.todoItemUnfavorite.todoItem
+    expect(Item.id).toBe(createdItemId)
+    expect(Item.isFavorite).toBe(false)
   })
 
   test('Mutation - todoItemDelete', async () => {

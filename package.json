@@ -13,7 +13,8 @@
     "format": "npx prettier --write './**/*.{ts,md}'",
     "start": "NODE_ENV=production node .nexus/build",
     "nexus:gen": "ts-node-dev --transpile-only api/schema.ts",
-    "test": "yarn nexus:gen && LOG_LEVEL=error jest --detectOpenHandles"
+    "test": "yarn nexus:gen && jest --detectOpenHandles",
+    "test:order": "yarn test --runInBand"
   },
   "jest": {
     "preset": "ts-jest",
@@ -35,8 +36,10 @@
     "@nexus/schema": "^0.16.0",
     "@prisma/client": "^2.9.0",
     "apollo-server": "^2.18.2",
+    "bcryptjs": "^2.4.3",
     "graphql": "^15.3.0",
     "graphql-relay": "^0.6.0",
+    "jsonwebtoken": "^8.5.1",
     "nexus-plugin-prisma": "^0.22.0",
     "winston": "^3.3.3"
   },
